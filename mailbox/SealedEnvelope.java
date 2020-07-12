@@ -5,7 +5,9 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import java.util.HashMap;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,31 +16,22 @@ public class SealedEnvelope implements Envelope {
     private static final String SE_NAME = "Sealed Envelope";
     private static final String TAKE_CONTENTS = "Take Contents";
     private static final String CLOSE = "Close";
+    private static final Material envelopeMaterial = Material.ENCHANTED_BOOK;
 
-    private Map<UUID, ItemStack[]> sealedMap;
     private boolean sealBroken;
 
+    private ItemStack[] items;
+
+    private final Mailbox plugin;
+
+    public SealedEnvelope(Mailbox plugin) {
+        this.plugin = plugin;
+    }
+
     // first constructor
-    public SealedEnvelope(Map<UUID, ItemStack[]> items) {
-        sealedMap = new HashMap<>(items);
+    public SealedEnvelope(Mailbox plugin, Map<UUID, ItemStack[]> items) {
+        this.plugin = plugin;
         sealBroken = false;
-    }
-
-
-    // second constructor
-    public SealedEnvelope() {
-        sealedMap = new HashMap<>();
-        sealBroken = false;
-    }
-
-    // gets the sealed envelope map
-    public Map<UUID, ItemStack[]> getEnvelopeMap() {
-        return sealedMap;
-    }
-
-    // sets sealed envelope map
-    public void setEnvelopeMap(Map<UUID, ItemStack[]> map) {
-        sealedMap = new HashMap<>(map);
     }
 
 
@@ -54,22 +47,25 @@ public class SealedEnvelope implements Envelope {
 
 
     // overrides giveEnvelope so that the name is different
-    public void giveEnvelope(Player player) {
-        player.getInventory().setItemInMainHand(InventoryUtils.createItem(SE_NAME, Material.PAPER));
+    public void giveEnvelope(Player player, String ID) {
+        ItemStack envelope = InventoryUtils.createItem(SE_NAME, envelopeMaterial, ID);
+        player.getInventory().setItemInMainHand(envelope);
     }
 
 
     // opens the envelope GUI
-    public void openEnvelope(Player player) {
+    public void openEnvelope(Player player, ItemStack item) {
         // creates inventory and adds seal / close menu options
         Inventory envelope = Bukkit.createInventory(player, 9, SE_NAME);
 
-        for (UUID key : sealedMap.keySet()) {
-            System.out.println(key);
-        }
+        ItemMeta meta = item.getItemMeta();
+        List<String> lore = meta.getLore();
+        String ID = lore.get(0);
 
-        if (sealedMap.get(player.getUniqueId()) != null) {
-            envelope.setContents(sealedMap.get(player.getUniqueId()));
+        items = plugin.getEnvelopeItems(ID);
+
+        if (items != null) {
+            envelope.setContents(items);
             player.sendMessage("found items, putting them in. but not really.");
         }
 

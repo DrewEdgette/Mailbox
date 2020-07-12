@@ -1,10 +1,15 @@
 package me.drew.mailbox;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.UUID;
 
 public class InventoryUtils {
 
@@ -71,11 +76,19 @@ public class InventoryUtils {
 
 
     // gets an item with custom info
-    public static ItemStack createItem(String customName, Material material) {
+    public static ItemStack createItem(String customName, Material material, String ID) {
         ItemStack is = new ItemStack(material);
         ItemMeta isMeta = is.getItemMeta();
         isMeta.setDisplayName(customName); //you can even set color
+        ArrayList<String> lore = new ArrayList<>();
+        lore.add(ID);
+        isMeta.setLore(lore);
         is.setItemMeta(isMeta);
         return is;
+    }
+
+    public static void transferItem(Player player, ItemStack item) {
+        Inventory inventory = Bukkit.createInventory(player, 36);
+        inventory.addItem(item);
     }
 }
