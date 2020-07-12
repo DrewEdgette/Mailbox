@@ -12,14 +12,17 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import java.util.HashMap;
-import java.util.Map;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.List;
 import java.util.UUID;
 
 public class EnvelopeEvents implements Listener {
 
     private final Mailbox plugin;
     private static final String ENVELOPE_NAME = "Envelope";
+
+    private ItemStack[] items;
 
     public EnvelopeEvents(Mailbox plugin) {
         this.plugin = plugin;
@@ -38,36 +41,46 @@ public class EnvelopeEvents implements Listener {
 
         if (itemInHand.hasItemMeta()) {
             if (itemInHand.getItemMeta().getDisplayName().equals(ENVELOPE_NAME)) {
-                player.sendMessage("you clicked the envelope");
-                plugin.getEnvelope().openEnvelope(player);
+                player.sendMessage("you clicked the regular envelope");
+                plugin.getEnvelope().openEnvelope(player, itemInHand);
             }
         }
     }
 
 
-    // handles close / seal button me.drew.mailbox.commands
+
+    // handles close / seal button
     @EventHandler
     public void onClickedButton(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
         Inventory clickedInv = event.getClickedInventory();
+        ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (clickedInv != null && event.getCurrentItem() != null) {
-            if (clickedInv.getTitle().equals(ENVELOPE_NAME)) {
-                switch(event.getCurrentItem().getType()) {
-                    case BARRIER:
-                        event.setCancelled(true);
-                        player.sendMessage("closing envelope...");
-                        player.closeInventory();
-                        break;
-                    case EMERALD_BLOCK:
-                        event.setCancelled(true);
-                        player.sendMessage("sealing envelope...");
-                        player.closeInventory();
-                        plugin.getSe().setEnvelopeMap(plugin.getEnvelope().getEnvelopeMap());
-                        player.getInventory().remove(Material.PAPER);
-                        InventoryUtils.removeAllItems(clickedInv);
-                        plugin.getSe().giveEnvelope(player);
-                        break;
+        if (item.hasItemMeta()) {
+            ItemMeta meta = item.getItemMeta();
+            if (meta.hasLore()) {
+                List<String> lore = meta.getLore();
+                String ID = lore.get(0);
+
+                if (clickedInv != null && event.getCurrentItem() != null) {
+                    if (clickedInv.getTitle().equals(ENVELOPE_NAME)) {
+                        switch(event.getCurrentItem().getType()) {
+                            case BARRIER:
+                                event.setCancelled(true);
+                                player.sendMessage("closing envelope...");
+                                player.closeInventory();
+                                break;
+                            case EMERALD_BLOCK:
+                                event.setCancelled(true);
+                                player.sendMessage("sealing envelope...");
+                                player.closeInventory();
+                                plugin.setEnvelopeItems(ID, clickedInv.getContents());
+                                player.getInventory().remove(Material.BOOK);
+                                InventoryUtils.removeAllItems(clickedInv);
+                                plugin.getSe().giveEnvelope(player, ID);
+                                break;
+                        }
+                    }
                 }
             }
         }
@@ -76,11 +89,22 @@ public class EnvelopeEvents implements Listener {
     // saves envelope contents before closing
     @EventHandler
     public void onCloseEnvelope(InventoryCloseEvent event) {
-        if (event.getView().getTitle().equals(ENVELOPE_NAME)) {
-            InventoryUtils.removeButtons(event.getInventory());
-            Map<UUID, ItemStack[]> map = new HashMap<>();
-            map.put(event.getPlayer().getUniqueId(), event.getInventory().getContents());
-            plugin.getEnvelope().setEnvelopeMap(map);
+        Player player = (Player) event.getPlayer();
+        Inventory inv = event.getInventory();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.hasItemMeta()) {
+            ItemMeta meta = item.getItemMeta();
+
+            if (meta.hasLore()) {
+                List<String> lore = meta.getLore();
+                String ID = lore.get(0);
+
+                if (event.getView().getTitle().equals(ENVELOPE_NAME)) {
+                    InventoryUtils.removeButtons(inv);
+                    plugin.setEnvelopeItems(ID, inv.getContents());
+                }
+            }
         }
     }
 }

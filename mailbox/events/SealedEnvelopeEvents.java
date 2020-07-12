@@ -12,10 +12,9 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.List;
 
 public class SealedEnvelopeEvents implements Listener {
     private final Mailbox plugin;
@@ -24,6 +23,7 @@ public class SealedEnvelopeEvents implements Listener {
     public SealedEnvelopeEvents(Mailbox plugin) {
         this.plugin = plugin;
     }
+
 
     // checks to see if player is holding envelope and then opens it
     @EventHandler
@@ -36,16 +36,18 @@ public class SealedEnvelopeEvents implements Listener {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
         if (itemInHand.hasItemMeta()) {
-            if (itemInHand.getItemMeta().getDisplayName().equals(SE_NAME) && plugin.getSe().getSealBroken()) {
+            if (itemInHand.getItemMeta().getDisplayName().equals(SE_NAME)) {
                 player.sendMessage("you clicked the sealed envelope");
-                plugin.getSe().openEnvelope(player);
+                if (plugin.getSe().getSealBroken()) {
+                    plugin.getSe().openEnvelope(player, itemInHand);
+                }
             }
         }
     }
 
 
 
-    // handles close / seal button me.drew.mailbox.commands
+    // handles seal button
     @EventHandler
     public void onClickedSealedEnvelopeButton(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
@@ -79,14 +81,25 @@ public class SealedEnvelopeEvents implements Listener {
     }
 
 
-
+    // saves envelope contents before closing
     @EventHandler
     public void onCloseSealedEnvelope(InventoryCloseEvent event) {
-        if (event.getView().getTitle().equals(SE_NAME)) {
-            InventoryUtils.removeButtons(event.getInventory());
-            Map<UUID, ItemStack[]> map = new HashMap<>();
-            map.put(event.getPlayer().getUniqueId(), event.getInventory().getContents());
-            plugin.getSe().setEnvelopeMap(map);
+        Player player = (Player) event.getPlayer();
+        Inventory inv = event.getInventory();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.hasItemMeta()) {
+            ItemMeta meta = item.getItemMeta();
+
+            if (meta.hasLore()) {
+                List<String> lore = meta.getLore();
+                String ID = lore.get(0);
+
+                if (event.getView().getTitle().equals(SE_NAME)) {
+                    InventoryUtils.removeButtons(inv);
+                    plugin.setEnvelopeItems(ID, inv.getContents());
+                }
+            }
         }
     }
 }
